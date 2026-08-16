@@ -1,0 +1,43 @@
+# Ryhavean Userbot — Render (pulsuz servis) konfiqurasiyası
+# Deploy: Render → New → Blueprint → bu repo seçilir.
+# 7/24 işləmə üçün UptimeRobot ilə https://<xidmet-adi>.onrender.com/ping ünvanı
+# hər 5 dəqiqədən bir yoxlanmalıdır.
+
+services:
+  - type: web
+    name: ryhavean-userbot
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: "pip install --no-cache-dir -r requirements.txt"
+    startCommand: "python main.py"
+    healthCheckPath: /ping
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        value: ryhavean
+      - key: STORAGE_BACKEND
+        value: mongo
+      - key: OWNER_ID
+        sync: false
+      - key: BOT_ADMINS
+        sync: false
+      - key: LICENSE_DAYS
+        value: "30"
+      - key: AUTO_JOIN_CHATS
+        value: "https://t.me/ryhaveanupdates,https://t.me/RyhaveanTeam"
+      - key: UPDATES_CHANNEL_URL
+        value: "https://t.me/ryhaveanupdates"
+      - key: COMMUNITY_GROUP_URL
+        value: "https://t.me/RyhaveanTeam"

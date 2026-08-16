@@ -12,9 +12,10 @@ from convopyro import Conversation
 
 from config import *
 from plugin_loader import load_extra_plugins
-from keepalive import start_keepalive
+from keepalive import start_keepalive, start_self_ping
 from utils.premium_patch import apply_premium_patch
 from session_manager import restore_all_sessions, start_userbot, license_watchdog
+from user_plugins import load_user_plugins
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +33,9 @@ async def main():
 
     # Render / UptimeRobot üçün keep-alive serveri
     start_keepalive(PORT)
+
+    # UptimeRobot (və ya Render) URL-i verilibsə, özünə periodik ping atır
+    start_self_ping(PING_URL, PING_INTERVAL)
 
     # İdarəedici bot klienti
     app = None
@@ -80,6 +84,13 @@ async def main():
             data = user_sessions.find_one({"user_id": owner_client.me.id})
             if data and "sudoers" in data:
                 SUDO[owner_client.me.id] = data["sudoers"]
+
+            try:
+                owner_plugins = await load_user_plugins(owner_client)
+                if owner_plugins:
+                    print(f"Şəxsi plaginlər yükləndi: {', '.join(owner_plugins)}")
+            except Exception as e:
+                print(f"Şəxsi plaginlər yüklənmədi: {e}")
 
             loaded_extra_plugins.extend(load_extra_plugins(owner_client, EXTRA_PLUGINS_DIR))
             if loaded_extra_plugins:

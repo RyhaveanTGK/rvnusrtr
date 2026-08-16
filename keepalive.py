@@ -91,3 +91,32 @@ def start_keepalive(port: int = 8080) -> None:
             logger.error("Keep-alive server xətası: %s", exc)
 
     threading.Thread(target=_run, daemon=True).start()
+
+
+def start_self_ping(url: str, interval: int = 240) -> None:
+    """UptimeRobot dəstəyi: layihə öz ünvanına periodik sorğu göndərir.
+
+    UptimeRobot (https://uptimerobot.com) üzərində HTTP(s) monitoru yaradıb
+    `<layihə-ünvanı>/ping` ünvanını 5 dəqiqəlik intervalla yoxlamaq kifayətdir.
+    Bu funksiya isə əlavə təhlükəsizlik qatıdır — monitor işləmədikdə belə
+    servisin yatmasının qarşısını alır.
+    """
+    if not url:
+        logger.info("PING_URL təyin edilməyib — öz-özünə ping deaktivdir.")
+        return
+
+    target = url.rstrip("/") + "/ping"
+
+    def _run():
+        import urllib.request
+
+        while True:
+            time.sleep(max(30, interval))
+            try:
+                with urllib.request.urlopen(target, timeout=20) as resp:
+                    logger.debug("Self-ping %s -> %s", target, resp.status)
+            except Exception as exc:
+                logger.debug("Self-ping alınmadı (%s): %s", target, exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+    logger.info("Öz-özünə ping aktivdir: %s (hər %s san)", target, interval)

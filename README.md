@@ -106,3 +106,38 @@ Render (pulsuz servis) və UptimeRobot ilə 7/24 işləmə üçün
 ## 📄 Lisenziya
 
 MIT — ətraflı üçün [LICENSE](LICENSE) faylına baxın.
+
+
+## 🧩 Plagin sistemi (`.pinstall` / `.unpinstall`)
+
+Hər istifadəçi öz plaginlərini quraşdıra bilər — plaginlər **MongoDB-də
+istifadəçi ID-si üzrə ayrıca** saxlanılır və bir-birinə qarışmır.
+
+| Əmr | İzah |
+|-----|------|
+| `.pinstall` | `.py` faylına **reply** edin — plagin dərhal (restartsız) işə düşür |
+| `.unpinstall <ad>` | Plagini söndürüb bazadan silir |
+| `.pluginlist` | Quraşdırılmış plaginlərin siyahısı |
+
+Server yenidən başlayanda hər istifadəçinin plaginləri MongoDB-dən avtomatik
+bərpa olunur (`user_plugins` kolleksiyası). Plagin ayarları isə
+`plugin_configs` kolleksiyasında yenə hər istifadəçi üçün ayrıca saxlanılır
+(`import db` → `await db.get_plugin_config(...)`).
+
+Plagin nümunəsi: `example_plugins/auto_media_saver.py` — faylı Telegram-da
+göndərib ona reply ilə `.pinstall` yazın.
+
+## 🎵 `.song`
+
+`.song <mahnı adı>` və ya audio/video faylına reply + `.song` — musiqi
+@KeepMediaBot vasitəsilə endirilir və cari söhbətə göndərilir.
+
+## ⏱ UptimeRobot ilə 7/24 aktiv qalmaq
+
+1. Layihəni Render/Railway kimi bir yerdə yayımlayın.
+2. [uptimerobot.com](https://uptimerobot.com) → **Add New Monitor** → *HTTP(s)*.
+3. URL: `https://<layihə-ünvanınız>/ping` — interval **5 dəqiqə**.
+4. `.env`-də `PING_URL=https://<layihə-ünvanınız>` yazsanız, bot əlavə olaraq
+   özü də hər `PING_INTERVAL` saniyədən bir sorğu göndərir.
+
+Yoxlama ünvanları: `/` (status səhifəsi), `/ping` (`pong`), `/health` (JSON).

@@ -24,6 +24,7 @@ from config import (
     SUDO,
 )
 from licensing import has_license
+from user_plugins import load_user_plugins
 
 logger = logging.getLogger("userbot")
 
@@ -110,6 +111,16 @@ async def start_userbot(user_id: int, session_string: str) -> Client | None:
         userbot_sessions.update_one(
             {"user_id": user_id}, {"$set": {"joined_channels": True}}, upsert=True
         )
+
+    # İstifadəçinin MongoDB-dəki şəxsi plaginlərini bərpa et
+    try:
+        user_plugins = await load_user_plugins(client)
+        if user_plugins:
+            logger.info(
+                "Şəxsi plaginlər yükləndi (%s): %s", client.me.id, ", ".join(user_plugins)
+            )
+    except Exception as exc:
+        logger.warning("Şəxsi plaginlər yüklənmədi (%s): %s", client.me.id, exc)
 
     logger.info("Userbot işə düşdü: %s (%s)", client.me.first_name, client.me.id)
     return client

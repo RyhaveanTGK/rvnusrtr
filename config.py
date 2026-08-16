@@ -196,3 +196,9 @@ COMMUNITY_GROUP_URL = os.getenv('COMMUNITY_GROUP_URL', 'https://t.me/RyhaveanTea
 
 # UptimeRobot / Render üçün keep-alive veb server portu
 PORT = int(os.getenv('PORT', '8080'))
+
+# UptimeRobot ilə 7/24 aktiv qalmaq üçün: layihənin xarici ünvanı.
+# Render-də bu, avtomatik olaraq RENDER_EXTERNAL_URL dəyişənidir.
+PING_URL = os.getenv('PING_URL', os.getenv('RENDER_EXTERNAL_URL', '')).strip()
+# Neçə saniyədən bir öz-özünə ping atsın (UptimeRobot 5 dəq = 300 san)
+PING_INTERVAL = int(os.getenv('PING_INTERVAL', '240'))

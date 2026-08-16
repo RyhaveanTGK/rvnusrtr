@@ -638,7 +638,7 @@ async def ping_command(client, message: Message):
 
 
 # ─────────────────────────── /commands ─────────────────────────────────────
-@Client.on_message(filters.command("commands") & filters.private)
+@Client.on_message(filters.command(["commands", "help", "menu", "yardim"]) & filters.private)
 @guard
 async def commands_handler(client, message: Message):
     engel = _license_guard(message.from_user.id)

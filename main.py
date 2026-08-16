@@ -14,6 +14,7 @@ from config import *
 from plugin_loader import load_extra_plugins
 from keepalive import start_keepalive, start_self_ping
 from utils.premium_patch import apply_premium_patch
+from utils.edit_mode import apply_edit_mode
 from session_manager import restore_all_sessions, start_userbot, license_watchdog
 from user_plugins import load_user_plugins
 
@@ -30,6 +31,9 @@ print("Ryhavean Userbot başladılır...")
 async def main():
     # Premium emoji sistemini bütün klientlərə tətbiq et
     apply_premium_patch()
+
+    # Userbot əmrləri yeni mesaj yerinə əmrin özünü redaktə edir
+    apply_edit_mode()
 
     # Render / UptimeRobot üçün keep-alive serveri
     start_keepalive(PORT)

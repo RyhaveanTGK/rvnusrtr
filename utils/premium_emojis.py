@@ -250,23 +250,83 @@ SONG_PREMIUM_EMOJI_IDS: List[int] = [
 ]
 SONG_EMOJI_CHAR: List[str] = ["🎵", "🎶", "🎧"]
 
-# Uzun emojini əvvəl tutmaq üçün uzunluğa görə sıralanmış pattern
-_SORTED_EMOJIS = sorted(PREMIUM_EMOJI_MAP.keys(), key=len, reverse=True)
-_EMOJI_RE = re.compile("|".join(re.escape(e) for e in _SORTED_EMOJIS))
+# ============================================================
+# Dinamik reyestr: PREMIUM_EMOJI_MAP + data/custom_emoji_ids.json
+# ============================================================
+_registry_cache: Optional[Dict[str, int]] = None
+_pattern_cache: Optional["re.Pattern[str]"] = None
+
+
+def _extra_registry() -> Dict[str, int]:
+    """data/custom_emoji_ids.json faylındakı əlavə custom emojiləri oxuyur."""
+    extra: Dict[str, int] = {}
+    try:
+        import json
+        from pathlib import Path
+
+        path = Path(__file__).resolve().parent.parent / "data" / "custom_emoji_ids.json"
+        if not path.exists():
+            return extra
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for pack in payload or []:
+            for item in pack.get("items", []):
+                emoji = item.get("emoji")
+                doc_id = item.get("document_id")
+                if emoji and doc_id is not None and emoji not in extra:
+                    extra[emoji] = int(doc_id)
+    except Exception:  # fayl pozulubsa sistem yenə işləməlidir
+        return {}
+    return extra
+
+
+def registry() -> Dict[str, int]:
+    """Bütün emoji -> premium ID xəritəsi (əl ilə yazılan + JSON dump)."""
+    global _registry_cache
+    if _registry_cache is None:
+        merged = dict(_extra_registry())
+        merged.update(PREMIUM_EMOJI_MAP)  # əl ilə seçilənlər üstündür
+        # Variation selector-siz variantları da əlavə et (🎙 <-> 🎙️)
+        for emoji, eid in list(merged.items()):
+            bare = emoji.replace("\ufe0f", "")
+            if bare and bare not in merged:
+                merged[bare] = eid
+            if not emoji.endswith("\ufe0f") and (emoji + "\ufe0f") not in merged:
+                merged[emoji + "\ufe0f"] = eid
+        _registry_cache = merged
+    return _registry_cache
+
+
+def _pattern() -> "re.Pattern[str]":
+    global _pattern_cache
+    if _pattern_cache is None:
+        keys = sorted(registry().keys(), key=len, reverse=True)
+        _pattern_cache = re.compile("|".join(re.escape(k) for k in keys)) if keys else re.compile(r"(?!x)x")
+    return _pattern_cache
+
+
+def register(emoji: str, document_id: int) -> None:
+    """Runtime-da yeni premium emoji əlavə edir (məs. `.addemoji`)."""
+    global _registry_cache, _pattern_cache
+    PREMIUM_EMOJI_MAP[emoji] = int(document_id)
+    _registry_cache = None
+    _pattern_cache = None
+
 
 # Artıq premium teq içində olan hissələri qorumaq üçün
 _EXISTING_TAG_RE = re.compile(r"<emoji[^>]*>.*?</emoji>", re.S)
+# HTML/markdown kod bloklarına toxunmuruq
+_CODE_RE = re.compile(r"<pre.*?</pre>|<code.*?</code>|```.*?```|`[^`\n]+`", re.S)
 
 
 def emoji_id(emoji: str) -> Optional[int]:
     """Verilmiş emoji üçün premium ID qaytarır (yoxdursa None)."""
-    return PREMIUM_EMOJI_MAP.get(emoji)
+    return registry().get(emoji)
 
 
 def pe(emoji: str, fallback: Optional[str] = None) -> str:
     """Emojini Telegram premium emoji HTML teqinə çevirir."""
     visible = fallback if fallback is not None else emoji
-    eid = PREMIUM_EMOJI_MAP.get(emoji)
+    eid = registry().get(emoji)
     if eid is None:
         return visible
     return f'<emoji id="{eid}">{visible}</emoji>'
@@ -279,30 +339,47 @@ def random_song_emoji() -> str:
 
 
 def _convert_chunk(chunk: str) -> str:
+    reg = registry()
+
     def _sub(match: "re.Match[str]") -> str:
         ch = match.group(0)
-        eid = PREMIUM_EMOJI_MAP.get(ch)
+        eid = reg.get(ch)
         return f'<emoji id="{eid}">{ch}</emoji>' if eid else ch
 
-    return _EMOJI_RE.sub(_sub, chunk)
+    return _pattern().sub(_sub, chunk)
 
 
 def premiumize(text: str) -> str:
     """Mətndəki bütün adi emojiləri premium emoji teqlərinə çevirir.
 
-    Artıq `<emoji id="...">...</emoji>` şəklində olan hissələrə toxunmur.
+    Toxunulmayan hissələr: artıq mövcud `<emoji>` teqləri, `<code>`/`<pre>`
+    blokları və markdown kod parçaları.
     """
     if not text:
         return text
+    protected = []
+    for rx in (_EXISTING_TAG_RE, _CODE_RE):
+        for m in rx.finditer(text):
+            protected.append((m.start(), m.end()))
+    protected.sort()
+
+    # Üst-üstə düşən aralıqları birləşdir
+    merged = []
+    for start, end in protected:
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+
     out: List[str] = []
     pos = 0
-    for m in _EXISTING_TAG_RE.finditer(text):
-        out.append(_convert_chunk(text[pos:m.start()]))
-        out.append(m.group(0))
-        pos = m.end()
+    for start, end in merged:
+        out.append(_convert_chunk(text[pos:start]))
+        out.append(text[start:end])
+        pos = end
     out.append(_convert_chunk(text[pos:]))
     return "".join(out)
 
 
 def available_emojis() -> List[str]:
-    return sorted(PREMIUM_EMOJI_MAP.keys())
+    return sorted(registry().keys())

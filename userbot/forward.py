@@ -4,7 +4,8 @@ import time
 import requests
 from pyrogram import Client, filters
 from pyrogram.errors import ChatForwardsRestricted, FileReferenceExpired
-from convopyro import Conversation, listen_message
+from convopyro import Conversation
+from utils.conversation import listen_message
 from config import *
 from tools import *
 
